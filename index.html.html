@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- SEO Meta Tags for Google Search -->
+    <title>MathNotes Pro | Student Note App by AKshaj GANDHI</title>
+    <meta name="description" content="A professional student note-taking app with built-in math equation support. Created by AKshaj GANDHI.">
+    <meta name="keywords" content="student note app, math notes, AKshaj GANDHI, equation editor, study tool">
+    <meta name="author" content="AKshaj GANDHI">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MathJax Configuration -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
+        }
+        
+        .equation-preview {
+            @apply p-4 bg-gray-50 border rounded-lg min-h-[80px] flex items-center justify-center text-xl mb-4 overflow-x-auto;
+        }
+
+        .note-card {
+            @apply bg-white p-5 rounded-3xl shadow-sm border border-slate-100 transition-all duration-300 flex flex-col h-full cursor-pointer;
+            -webkit-user-select: none;
+        }
+
+        @media (hover: hover) {
+            .note-card:hover {
+                transform: translateY(-4px);
+                @apply shadow-xl border-indigo-200 bg-indigo-50/10;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .modal-content {
+                @apply rounded-t-3xl rounded-b-none;
+                height: 95vh;
+            }
+            .modal-container {
+                @apply items-end;
+            }
+        }
+
+        .note-content {
+            word-wrap: break-word;
+            line-height: 1.6;
+        }
+
+        mjx-container {
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 5px 0;
+        }
+
+        .signature-gradient {
+            background: linear-gradient(90deg, #4f46e5, #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        #noteModal.hidden { display: none; }
+        #noteModal { display: flex; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans flex flex-col">
+
+    <div id="app" class="max-w-5xl mx-auto p-4 md:p-8 flex-grow w-full">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">v2.0 Mobile</span>
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">MathNotes Pro</h1>
+                </div>
+                <p class="text-slate-500 font-medium italic text-sm">Created by AKshaj GANDHI</p>
+            </div>
+            <button onclick="openNoteModal()" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 md:py-3 rounded-2xl font-bold shadow-lg shadow-indigo-200 transition transform active:scale-95 text-lg">
+                + New Note
+            </button>
+        </header>
+
+        <div class="mb-6">
+            <div class="relative">
+                <input type="text" id="searchInput" oninput="renderNotes()" placeholder="Search your math notes..." class="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 absolute left-4 top-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+        </div>
+
+        <div id="notesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-20"></div>
+    </div>
+
+    <footer class="w-full py-8 bg-white border-t border-slate-100 mt-auto">
+        <div class="max-w-5xl mx-auto px-4 md:px-8 text-center">
+            <div class="mb-2">
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Designed By</p>
+                <h2 class="text-xl font-black signature-gradient tracking-tight">AKshaj GANDHI</h2>
+            </div>
+            <p class="text-slate-400 text-xs font-medium">Made with Gemini</p>
+        </div>
+    </footer>
+
+    <div id="noteModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 modal-container items-center justify-center">
+        <div class="bg-white w-full max-w-2xl max-h-[95vh] overflow-hidden shadow-2xl flex flex-col modal-content sm:rounded-3xl">
+            <div class="p-5 border-b flex justify-between items-center bg-slate-50">
+                <h2 id="modalTitleText" class="text-xl font-bold text-slate-800">New Note</h2>
+                <button onclick="closeNoteModal()" class="bg-slate-200 text-slate-600 rounded-full w-10 h-10 flex items-center justify-center text-2xl">&times;</button>
+            </div>
+
+            <div class="p-5 overflow-y-auto flex-grow space-y-6">
+                <input type="text" id="noteTitle" placeholder="Topic Name" class="w-full p-3 border-b-2 border-slate-100 focus:border-indigo-500 outline-none text-lg font-semibold bg-transparent">
+                <textarea id="noteText" placeholder="Start typing..." oninput="updateLiveNotePreview()" class="w-full h-32 p-4 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none bg-slate-50"></textarea>
+                <div id="liveNotePreview" class="p-4 bg-white border-2 border-dashed border-indigo-100 rounded-2xl min-h-[60px] text-slate-700 whitespace-pre-wrap text-sm"></div>
+
+                <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                    <h3 class="text-indigo-900 font-bold text-sm mb-3 text-center uppercase">Math Builder</h3>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <button onclick="setupEq('frac')" class="py-3 bg-white border border-indigo-200 rounded-xl text-indigo-700 font-bold text-sm">Fraction</button>
+                        <button onclick="setupEq('pow')" class="py-3 bg-white border border-indigo-200 rounded-xl text-indigo-700 font-bold text-sm">Exponent</button>
+                        <button onclick="setupEq('sqrt')" class="py-3 bg-white border border-indigo-200 rounded-xl text-indigo-700 font-bold text-sm">Square Root</button>
+                        <button onclick="setupEq('root')" class="py-3 bg-white border border-indigo-200 rounded-xl text-indigo-700 font-bold text-sm">N-th Root</button>
+                    </div>
+                    <div id="equationInputs" class="hidden">
+                        <div id="inputsGrid" class="flex items-center gap-2 mb-4 p-3 bg-white rounded-xl justify-center"></div>
+                        <div id="previewArea" class="equation-preview bg-white"><span id="mathOutput"></span></div>
+                        <button onclick="insertToNote()" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold">Insert Into Note</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-5 border-t bg-slate-50 flex flex-col gap-2">
+                <button onclick="saveNote()" id="saveBtn" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg">Save Note</button>
+                <button onclick="closeNoteModal()" class="w-full py-3 text-slate-400 font-bold text-sm">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let notes = JSON.parse(localStorage.getItem('akshaj_math_notes') || '[]');
+        let currentEqType = '';
+        let editingNoteId = null;
+
+        function openNoteModal(noteId = null) {
+            editingNoteId = noteId;
+            const modal = document.getElementById('noteModal');
+            if (noteId) {
+                const note = notes.find(n => n.id === noteId);
+                document.getElementById('noteTitle').value = note.title;
+                document.getElementById('noteText').value = note.content;
+                document.getElementById('modalTitleText').innerText = "Edit Note";
+                document.getElementById('saveBtn').innerText = "Update Note";
+            } else {
+                document.getElementById('noteTitle').value = '';
+                document.getElementById('noteText').value = '';
+                document.getElementById('modalTitleText').innerText = "New Note";
+                document.getElementById('saveBtn').innerText = "Save Note";
+            }
+            modal.classList.remove('hidden');
+            updateLiveNotePreview();
+        }
+
+        function closeNoteModal() {
+            document.getElementById('noteModal').classList.add('hidden');
+            editingNoteId = null;
+        }
+
+        function setupEq(type) {
+            currentEqType = type;
+            const container = document.getElementById('inputsGrid');
+            document.getElementById('equationInputs').classList.remove('hidden');
+            container.innerHTML = '';
+            const createInp = (p, id) => {
+                const i = document.createElement('input');
+                i.placeholder = p; i.id = id; i.className = "w-16 p-2 border rounded-lg text-center";
+                i.oninput = updateMathPreview; return i;
+            };
+            if (type === 'frac' || type === 'pow' || type === 'root') {
+                container.appendChild(createInp('a', 'input1'));
+                container.appendChild(document.createTextNode(type === 'frac' ? '/' : (type === 'pow' ? '^' : '√')));
+                container.appendChild(createInp('b', 'input2'));
+            } else {
+                container.appendChild(document.createTextNode('√'));
+                container.appendChild(createInp('x', 'input1'));
+            }
+            updateMathPreview();
+        }
+
+        function updateMathPreview() {
+            const v1 = document.getElementById('input1')?.value || 'a';
+            const v2 = document.getElementById('input2')?.value || 'b';
+            let l = '';
+            if(currentEqType==='frac') l=`\\frac{${v1}}{${v2}}`;
+            else if(currentEqType==='pow') l=`${v1}^{${v2}}`;
+            else if(currentEqType==='sqrt') l=`\\sqrt{${v1}}`;
+            else l=`\\sqrt[${v1}]{${v2}}`;
+            document.getElementById('mathOutput').innerHTML = `\\( ${l} \\)`;
+            MathJax.typesetPromise([document.getElementById('mathOutput')]);
+        }
+
+        function insertToNote() {
+            updateMathPreview();
+            const l = document.getElementById('mathOutput').innerText;
+            document.getElementById('noteText').value += ` $${l.replace('\\(', '').replace('\\)', '').trim()}$ `;
+            document.getElementById('equationInputs').classList.add('hidden');
+            updateLiveNotePreview();
+        }
+
+        function updateLiveNotePreview() {
+            const t = document.getElementById('noteText').value;
+            const p = document.getElementById('liveNotePreview');
+            p.innerText = t || 'Formatting preview...';
+            MathJax.typesetPromise([p]);
+        }
+
+        function saveNote() {
+            const title = document.getElementById('noteTitle').value.trim();
+            const content = document.getElementById('noteText').value.trim();
+            if(!title || !content) return;
+            if(editingNoteId) {
+                const i = notes.findIndex(n => n.id === editingNoteId);
+                notes[i] = {...notes[i], title, content, date: new Date().toLocaleDateString() + " (Ed)"};
+            } else {
+                notes.unshift({id: Date.now(), title, content, date: new Date().toLocaleDateString()});
+            }
+            localStorage.setItem('akshaj_math_notes', JSON.stringify(notes));
+            renderNotes();
+            closeNoteModal();
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notesContainer');
+            container.innerHTML = '';
+            notes.forEach(note => {
+                const d = document.createElement('div');
+                d.className = "note-card";
+                d.onclick = (e) => { if(e.target.tagName !== 'BUTTON') openNoteModal(note.id); };
+                d.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-slate-800">${note.title}</h3>
+                        <span class="text-[9px] text-slate-400">${note.date}</span>
+                    </div>
+                    <div class="text-sm text-slate-600 flex-grow whitespace-pre-wrap">${note.content}</div>
+                    <div class="mt-4 pt-2 border-t flex justify-between items-center">
+                        <span class="text-[10px] text-indigo-500 font-bold uppercase">Tap to Edit</span>
+                        <button onclick="deleteNote(${note.id})" class="text-slate-300 hover:text-red-500">Delete</button>
+                    </div>
+                `;
+                container.appendChild(d);
+            });
+            MathJax.typesetPromise([container]);
+        }
+
+        function deleteNote(id) {
+            if(confirm("Delete?")) {
+                notes = notes.filter(n => n.id !== id);
+                localStorage.setItem('akshaj_math_notes', JSON.stringify(notes));
+                renderNotes();
+            }
+        }
+
+        window.onload = renderNotes;
+    </script>
+</body>
+</html>
